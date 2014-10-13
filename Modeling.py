@@ -3,7 +3,7 @@ __author__ = 'User'
 import numpy as np
 import numpy.random as random
 
-noise_probability = 0.1
+p = 0.05
 LEFT = 0
 UP = 1
 RIGHT = 2
@@ -11,14 +11,20 @@ DOWN = 3
 
 size = 10
 BLACK = 0
-WHITE = 255
-PROCESSED = 254
+WHITE = 1
+PROCESSED = -1
 
 EXPERIMENTS_COUNT = 1000
 true_positive = 0
 true_negative = 0
 false_positive = 0
 false_negative = 0
+
+expected_true_positive =  (1 - p) * (1 - p * np.power(1 - p, 3))
+expected_true_negative =  (1 - p) * (p + np.power(1 - p, 3))
+expected_false_positive = (1 - p) * (1 - np.power(1 - p, 4))
+expected_false_negative = (1 - p) * (1 + np.power(1 - p, 4))
+
 
 class Coordinate:
     def __init__(self, coordinate):
@@ -61,13 +67,13 @@ def create_source_map(needShip):
     source_map = np.zeros([size, size], dtype=np.int)
 
     if needShip:
-        x, y = random.randint(0, size), random.randint(0, size)
+        x, y = random.randint(1, size), random.randint(1, size)
         source_map[x, y] = WHITE
 
         direction = random.randint(0, 5)
 
         if direction == LEFT:
-            if y != 0:        source_map[x, y - 1] = WHITE
+            if y != 1:        source_map[x, y - 1] = WHITE
             else:             source_map[x, y + 1] = WHITE
 
         elif direction == UP:
@@ -76,10 +82,10 @@ def create_source_map(needShip):
 
         elif direction == RIGHT:
             if y != size - 1: source_map[x, y + 1] = WHITE
-            else:             source_map[x, y-1] = WHITE
+            else:             source_map[x, y - 1] = WHITE
 
         else:  # direction == down
-            if x != 0:        source_map[x - 1, y] = WHITE
+            if x != 1:        source_map[x - 1, y] = WHITE
             else:             source_map[x + 1, y] = WHITE
 
     return source_map
@@ -89,7 +95,7 @@ def create_noise_map(source_map):
     noise_map = np.copy(source_map)
     for i in range(size):
         for j in range(size):
-            if random.random() < noise_probability:
+            if random.random() < p:
                 if noise_map[i, j] == BLACK:
                     noise_map[i, j] = WHITE
                 else:
@@ -184,9 +190,16 @@ for i in range (EXPERIMENTS_COUNT):
         true_negative += 1
 
 
-print "true positive ", true_positive
-print "false positive ", false_positive
+print "true positive results ", true_positive / float (EXPERIMENTS_COUNT)
+print "false positive results ", false_positive / float (EXPERIMENTS_COUNT)
 
-print "true negative ", true_negative
-print "false negative ", false_negative
+print "true negative results ", true_negative / float (EXPERIMENTS_COUNT)
+print "false negative results ", false_negative / float (EXPERIMENTS_COUNT)
+
+print ""
+
+print "expected true_positive ", expected_true_positive
+print "expected false_positive ", expected_false_positive
+print "expected true_negative ", expected_true_negative
+print "expected false_negative ", expected_false_negative
 
