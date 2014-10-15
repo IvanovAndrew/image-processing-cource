@@ -3,7 +3,7 @@ __author__ = 'User'
 import numpy as np
 import numpy.random as random
 
-p = 0.05
+p = 0.1
 LEFT = 0
 UP = 1
 RIGHT = 2
@@ -21,10 +21,9 @@ false_positive = 0
 false_negative = 0
 
 expected_true_positive =  (1 - p) * (1 - p * np.power(1 - p, 3))
-expected_true_negative =  (1 - p) * (p + np.power(1 - p, 3))
-expected_false_positive = (1 - p) * (1 - np.power(1 - p, 4))
-expected_false_negative = (1 - p) * (1 + np.power(1 - p, 4))
-
+expected_true_negative =  (1 - p) * (1 + p * np.power(1 - p, 3))
+expected_false_positive = p * (1 - np.power(1 - p, 4))
+expected_false_negative = p * (1 + np.power(1 - p, 4))
 
 class Coordinate:
     def __init__(self, coordinate):
@@ -96,10 +95,8 @@ def create_noise_map(source_map):
     for i in range(size):
         for j in range(size):
             if random.random() < p:
-                if noise_map[i, j] == BLACK:
-                    noise_map[i, j] = WHITE
-                else:
-                    noise_map[i, j] = BLACK
+                noise_map[i, j] = (noise_map[i, j] + WHITE) % 2;
+
     return noise_map
 
 def get_available_neighborhoods(center, path):
@@ -155,11 +152,14 @@ def find_ships(map):
                 if len(path) > 1:
                     ship = Ship(path)
                     ships_list.append(ship)
+                else:
+                    map[i, j] = BLACK
     return ships_list
 
 ###ship exists
 for i in range (EXPERIMENTS_COUNT):
     source_map = create_source_map(True)
+
     real_ship = find_ships(np.copy(source_map)).pop(0)
 
     noise_map = create_noise_map(source_map)
@@ -174,7 +174,7 @@ for i in range (EXPERIMENTS_COUNT):
     if flag:
         true_positive += 1
     else:
-        false_positive += 1
+        false_negative += 1
 
 ###ship doesn't exist
 for i in range (EXPERIMENTS_COUNT):
@@ -185,21 +185,22 @@ for i in range (EXPERIMENTS_COUNT):
     ships = find_ships(noise_map)
 
     if len(ships) > 0:
-        false_negative += 1
+        false_positive += 1
     else:
         true_negative += 1
 
-
 print "true positive results ", true_positive / float (EXPERIMENTS_COUNT)
-print "false positive results ", false_positive / float (EXPERIMENTS_COUNT)
-
-print "true negative results ", true_negative / float (EXPERIMENTS_COUNT)
 print "false negative results ", false_negative / float (EXPERIMENTS_COUNT)
-
 print ""
 
 print "expected true_positive ", expected_true_positive
-print "expected false_positive ", expected_false_positive
-print "expected true_negative ", expected_true_negative
 print "expected false_negative ", expected_false_negative
 
+print "====="
+print "false positive results ", false_positive / float (EXPERIMENTS_COUNT)
+print "true negative results ", true_negative / float (EXPERIMENTS_COUNT)
+
+print ""
+
+print "expected false_positive ", expected_false_positive
+print "expected true_negative ", expected_true_negative
