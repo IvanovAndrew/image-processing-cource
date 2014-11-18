@@ -1,7 +1,6 @@
 __author__ = 'Andrew'
 
 import numpy as np
-import numpy.random as random
 import cv2
 import math
 
@@ -13,16 +12,11 @@ BLACK = 0
 GRAY = 128
 WHITE = 255
 
-
 X_START_POSITION = 1
 Y_START_POSITION = 1
 
 HORIZONTAL_SPEED = 5
 VERTICAL_ACCELERATION = 10
-
-# test = cv2.imread("cat.jpg")
-# print type (test[0, 0])
-##print "ok"
 
 source_map = np.empty([IMAGE_SIZE, IMAGE_SIZE], dtype=np.uint8)
 
@@ -115,7 +109,6 @@ def calculate_error (predicted, real):
 
     return math.sqrt (temp_x + temp_y)
 
-
 x, y = X_START_POSITION, Y_START_POSITION
 brick_centers.append((x, y))
 errors_sum = 0
@@ -132,24 +125,15 @@ for t in range(1, FRAMES_COUNT):
     x, y = get_next_center(t)
     brick_centers.append((x, y))
 
-    print "corrected (", corrected, ")"
-
-    print "real (", (x, y), ")"
     error = calculate_error(corrected, (x, y))
-    print "error ", error
 
     errors_sum += error
-    print ""
 
 plot_bricks(predicted_centers, GRAY)
 plot_bricks(brick_centers, WHITE)
 
 source_map = np.transpose(source_map)
 
-print "errors: ", errors_sum
 print "average errors: ", (errors_sum / float(len(predicted_centers)))
 black_image = cv2.cvtColor(source_map, cv2.COLOR_GRAY2BGR)
 cv2.imwrite("kalman.png", black_image)
-
-
-print "ok"
