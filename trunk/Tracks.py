@@ -1,14 +1,17 @@
 __author__ = 'Andrew'
 
 import numpy as np
-##import cv2
+import cv2
 
 BLACK = 0
 GRAY = 128
+RED = 200
 WHITE = 255
 IMAGE_SIZE = 600
-FRAMES_COUNT = 100
+FRAMES_COUNT = 10
 GOOD_TRACKS_COUNT = 20
+IMAGE_NAME = "frame_"
+EXTENSION = ".png"
 
 first = []
 second = []
@@ -16,14 +19,16 @@ third = []
 fourth = []
 fifth = []
 
+# region source map creating
 def create_map():
-
-    image = np.empty([IMAGE_SIZE, IMAGE_SIZE], dtype=np.uint8)
+    image = np.empty([IMAGE_SIZE, IMAGE_SIZE], dtype=type(int))
     for i in range(IMAGE_SIZE):
         for j in range(IMAGE_SIZE):
             image[i, j] = BLACK
     return image
+# endregion
 
+# region source tracks
 def get_next_coordinates_1(t):
 
     return 5*t + 1, IMAGE_SIZE/2 - t/4
@@ -31,32 +36,35 @@ def get_next_coordinates_1(t):
 def get_next_coordinates_2(t):
 
     return 5*t + 1, IMAGE_SIZE/2 + t/4
+# endregion
 
-def plot_point(map, point):
+def draw_straight_line(image, one, two, color):
+    x0, y0 = one
+    x1, y1 = two
+
+    delta_x = x1 - x0
+    step = (y1 - y0)/float(delta_x)
+
+    for i in range(delta_x + 1):
+        x = x0 + i
+        y = y0 + int(step * i)
+
+        plot_point(image, (x, y), color)
+
+def plot_point(image, point, color):
 
     x, y = point
-    map[x - 1, y - 1] = WHITE
-    map[x - 1, y] = WHITE
-    map[x - 1, y + 1] = WHITE
+    image[x - 1, y - 1] = color
+    image[x - 1, y] = color
+    image[x - 1, y + 1] = color
 
-    map[x, y - 1] = WHITE
-    map[x, y] = WHITE
-    map[x, y + 1] = WHITE
+    image[x, y - 1] = color
+    image[x, y] = color
+    image[x, y + 1] = color
 
-    map[x + 1, y - 1] = WHITE
-    map[x + 1, y] = WHITE
-    map[x + 1, y + 1] = WHITE
-
-# points = []
-# source = create_map()
-
-def init_points():
-
-    first.append  (get_next_coordinates_1(0), get_next_coordinates_2(0))
-    second.append (get_next_coordinates_1(1), get_next_coordinates_2(1))
-    third.append  (get_next_coordinates_1(2), get_next_coordinates_2(2))
-    fourth.append (get_next_coordinates_1(3), get_next_coordinates_2(3))
-    fifth.append  (get_next_coordinates_1(4), get_next_coordinates_2(4))
+    image[x + 1, y - 1] = color
+    image[x + 1, y] = color
+    image[x + 1, y + 1] = color
 
 def update_points(one, two, three, four, five, newPoint):
 
@@ -67,6 +75,7 @@ def update_points(one, two, three, four, five, newPoint):
     five = newPoint
     return one, two, three, four, five
 
+# region Hypothesis
 def calculate_sum(vector):
 
     res = 0
@@ -79,7 +88,7 @@ def calculate_scalar_production(one, two):
 
     res = 0
     for i in range(len(one)):
-        res += one.index(i) * two.index(i)
+        res += one[i] * two[i]
 
     return res
 
@@ -87,13 +96,13 @@ def calculate_rating(k, b, x_vector, y_vector):
 
     res = 0
     for i in range(len(x_vector)):
-        temp = k * x_vector.index(i) + b - y_vector.index(i)
+        temp = k * x_vector[i] + b - y_vector[i]
         res += temp * temp
 
     return res
 
-def analyse_hypothesis(p0, p1, p2, p3, p4):
-
+def analyse_hypothesis(hypothesis):
+    p0, p1, p2, p3, p4 = hypothesis
     x0, y0 = p0
     x1, y1 = p1
     x2, y2 = p2
@@ -126,7 +135,7 @@ def analyse_hypothesis(p0, p1, p2, p3, p4):
     rating = calculate_rating(k, b, x_vector, y_vector)
     return rating
 
-def generate_tracks():
+def generate_hypothesis():
     hypoToRating = {}
     for point1 in first:
         for point2 in second:
@@ -136,23 +145,60 @@ def generate_tracks():
                         hypothesis = (point1, point2, point3, point4, point5)
                         rating = analyse_hypothesis (hypothesis)
                         hypoToRating[hypothesis] = rating
-    hypoToRating.items().sort()
 
+    items = sorted(hypoToRating.items(), key=lambda x: x[1])
+    count = 0
+    result = []
+    for item in items:
+        if count == GOOD_TRACKS_COUNT:
+            break
 
-for i in range(5, FRAMES_COUNT):
+        points, rating = item
+        # print "track", count, ": points ", points, "rating ", rating
+
+        result.append(points)
+        count += 1
+
+    return result
+# endregion
+
+def save_image(image, suffix):
+    name = IMAGE_NAME + str(suffix) + EXTENSION
+    cv2.imwrite(name, image)
+
+def draw_tracks(tracks):
+
+    is_first = True
+    image = create_map()
+
+    for track in tracks:
+        color = GRAY
+        if is_first:
+            color = RED
+            is_first = False
+
+        point1, point2, point3, point4, point5 = track
+        draw_straight_line(image, point1, point2, color)
+        draw_straight_line(image, point2, point3, color)
+        draw_straight_line(image, point3, point4, color)
+        draw_straight_line(image, point4, point5, color)
+
+    return image
+
+for i in range(FRAMES_COUNT):
+    print "##### ", i, "starts #####"
     point1 = get_next_coordinates_1(i)
     point2 = get_next_coordinates_2(i)
 
     first, second, third, fourth, fifth = \
         update_points(first, second, third, fourth, fifth, (point1, point2))
 
-    generate_tracks()
-    # points.append(point1)
-    # points.append(point2)
-    # print "one =", point1, "two = ", point2
+    print "first = ", first
+    print "second = ", second
+    good_tracks = generate_hypothesis()
 
-# for point in points:
-#     plot_point(source, point)
+    image = draw_tracks(good_tracks)
 
-# black_image = cv2.cvtColor(source, cv2.COLOR_GRAY2BGR)
-# cv2.imwrite("tracks.png", black_image)
+    save_image(image, i)
+
+    print "#####", i, "ends #####"
