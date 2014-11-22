@@ -4,18 +4,53 @@ import numpy as np
 import cv2
 
 BLACK = [0, 0, 0]
-GRAY = [128, 128, 128]
-RED = [0, 0, 255]
-BLUE = [255, 0, 0]
-GREEN = [0, 255, 0]
-WHITE = [255, 255, 255]
 
-number_to_color = dict([(0, GRAY), (1, GRAY),(2, GRAY),(3, GRAY),(4, GRAY),(5, GRAY),
-                        (6, BLUE),(7, BLUE),(8, BLUE), (9, BLUE),(10, BLUE),(11, BLUE),
-                        (12, GREEN),(13, GREEN),(14, GREEN),(15, GREEN),(16, GREEN),(17, GREEN),(18, GREEN),
-                        (19, RED)])
+BLUE           = [255, 0, 0]
+DARK_TURQUOISE = [209, 206, 0]
+DARK_GREEN     = [0, 100, 0]
+GREEN          = [0, 255, 0]
+GRAY           = [128, 128, 128]
+SADDLE_BROWN   = [19, 69, 139]
+INDIAN_RED     = [92, 92, 205]
+BEIGE          = [220, 245, 245]
+MAGENTA        = [255, 0, 255]
+YELLOW         = [0, 255, 255]
+NAVY_BLUE      = [128, 0, 0]
+PEACH_PUFF1     = [185, 218, 255]
+MISTYROSE1     = [225, 228, 255]
+SLATEBLUE1     = [255, 111, 131]
+CYAN          = [255, 255, 0]
+SPRING_GREEN1  = [127, 255, 0]
+DARK_GOLDENROD4 = [8, 101, 139]
+PLUM1          = [255, 187, 255]
+DARK_ORCHID1   = [255, 62, 191]
+RED            = [0, 0, 255]
+WHITE          = [255, 255, 255]
 
-FRAMES_COUNT = 50
+number_to_color = dict([
+                        (0, GRAY),
+                        (1, DARK_GOLDENROD4),
+                        (2, DARK_TURQUOISE),
+                        (3, MISTYROSE1),
+                        (4, DARK_GREEN),
+                        (5, GREEN),
+                        (6, PLUM1),
+                        (7, SLATEBLUE1),
+                        (8, BLUE),
+                        (9, CYAN),
+                        (10, SADDLE_BROWN),
+                        (11, PEACH_PUFF1),
+                        (12, INDIAN_RED),
+                        (13, NAVY_BLUE),
+                        (14, BEIGE),
+                        (15, SPRING_GREEN1),
+                        (16, MAGENTA),
+                        (17, YELLOW),
+                        (18, DARK_ORCHID1),
+                        (19, RED)
+                    ])
+
+FRAMES_COUNT = 100
 GOOD_TRACKS_COUNT = 20
 LAST_POINTS = 5
 
@@ -90,6 +125,8 @@ def plot_track_point(image, point, color):
     image[x, y] = color
 
 def draw_straight_line(image, one, two, color):
+    is_red = color == RED
+    # print one, " -> ", two
     x_start, y_start = one
     x_end, y_end = two
 
@@ -108,11 +145,15 @@ def draw_straight_line(image, one, two, color):
 
             plot_track_point(image, (x, y), color)
 
+            if is_red:
+                plot_track_point(image, (x, y + 1), color)
+
     else:
         step = delta_x / float(delta_y)
 
         if step < 0:
             y0 = y_end
+            x0 = x_end
 
         for i in range(1, np.abs(delta_y)):
             x = x0 + int(step * i)
@@ -120,6 +161,9 @@ def draw_straight_line(image, one, two, color):
             # print (x, y)
 
             plot_track_point(image, (x, y), color)
+
+            if is_red:
+                plot_track_point(image, (x + 1, y), color)
 
 def draw_tracks(tracks):
 
@@ -129,12 +173,13 @@ def draw_tracks(tracks):
     for track in tracks:
         color = number_to_color.get(count)
 
+        # print "traectory starts"
         point1, point2, point3, point4, point5 = track
         draw_straight_line(image, point1, point2, color)
         draw_straight_line(image, point2, point3, color)
         draw_straight_line(image, point3, point4, color)
         draw_straight_line(image, point4, point5, color)
-
+        # print "traectory ends"
         count += 1
 
     image = fill_object_points(image)
@@ -230,17 +275,18 @@ def generate_hypothesis():
     return result
 # endregion
 
-# region source tracks
+# region Source tracks
 def get_next_coordinates_1(t):
 
-    return t * (OBJECT_SIZE * 4) + 1, IMAGE_SIZE/2 - t * (OBJECT_SIZE * 2)
+    return t * (OBJECT_SIZE * 4) + 1, IMAGE_SIZE/2 - t * OBJECT_SIZE
 
 def get_next_coordinates_2(t):
 
-    return t * (OBJECT_SIZE * 4) + 1, IMAGE_SIZE/2 + t * (OBJECT_SIZE * 2)
+    return t * (OBJECT_SIZE * 4) + 1, IMAGE_SIZE/2 + t * OBJECT_SIZE
 # endregion
 
 for i in range(FRAMES_COUNT):
+
     print "##### ", i, "starts #####"
     point1 = get_next_coordinates_1(i)
     point2 = get_next_coordinates_2(i)
