@@ -263,14 +263,6 @@ def draw_tracks():
 # endregion
 
 # region threshold hypotheses
-def calculate_sum(vector):
-
-    res = 0
-    for num in vector:
-        res += num
-
-    return res
-
 def calculate_scalar_production(one, two):
 
     res = 0
@@ -294,10 +286,7 @@ def analyse_hypothesis(x_vector, y_vector):
     N = len(x_vector)
 
     ## sum of x_i
-    X = calculate_sum(x_vector)
-
-    ## sum of y_i
-    Y = calculate_sum(y_vector)
+    X, Y = np.sum(x_vector), np.sum(y_vector)
 
     ## sum of x_i^2
     Q = calculate_scalar_production(x_vector, x_vector)
@@ -308,8 +297,6 @@ def analyse_hypothesis(x_vector, y_vector):
     ## straight line: y = k * x + b
     ## koefficient k
     k = (N * S - X * Y) / float(N * Q - X * X)
-
-    ## straight line: y = k * x + b
     ## koefficient b
     b = (Q * Y - S * X) / float(N * Q - X * X)
 
@@ -379,8 +366,7 @@ def get_next_coordinates_2(t):
 for i in range(FRAMES_COUNT):
 
     print "##### ", i, "starts #####"
-    point1 = get_next_coordinates_1(i)
-    point2 = get_next_coordinates_2(i)
+    point1, point2 = get_next_coordinates_1(i), get_next_coordinates_2(i)
 
     if i == 0:
         first_track = Trajectory([point1])
