@@ -6,84 +6,98 @@ import cv2 as cv
 
 RESULT_FILE_NAME = "result.txt"
 DELTA = 2
-MATCHING_THRESHOLD = 500 * DELTA
-PIXEL_THRESHOLD = 100
+MATCHING_THRESHOLD = 100
+DERIVATION_THRESHOLD = 10
+
+fst_image = cv2.imread("im2.png", cv2.CV_LOAD_IMAGE_GRAYSCALE)
+snd_image = cv2.imread("im6.png", cv2.CV_LOAD_IMAGE_GRAYSCALE)
 
 one_colored = cv2.imread("im2.png", cv2.CV_LOAD_IMAGE_COLOR)
 
-fst_image = cv2.cvtColor(one_colored, cv.COLOR_RGB2GRAY)
-snd_image = cv2.imread("im6.png", cv2.CV_LOAD_IMAGE_GRAYSCALE)
-
-s_x = fst_image.shape[0]
-s_y = fst_image.shape[1]
+rows = fst_image.shape[0]
+columns = fst_image.shape[1]
 
 # region file manipulations
-def create_file (fileName):
+def create_file ():
 
-    file = open(fileName, "w")
+    file = open(RESULT_FILE_NAME, "w")
     file.write("")
     file.close()
 
-def write_to_file (fileName, x, y, z, color):
+def write_to_file (x, y, z, color):
     r, g, b = color
-    file = open (fileName, "a")
+    file = open (RESULT_FILE_NAME, "a")
     file.write (str(x) + " " + str(y) + " " + str(z) + " " + str(r) + " " + str(g) + " " + str(b) + "\n" )
     file.close()
 
-create_file(RESULT_FILE_NAME)
+# def write_to_file (x, y, z):
+#     file = open (RESULT_FILE_NAME, "a")
+#     file.write (str(x) + " " + str(y) + " " + str(z) + "\n" )
+#     file.close()
+
+create_file()
 # endregion
 
 def calculate_x_y_z(u, v, d):
 
-    x = u - s_x / 2
-    y = v - s_y / 2
+    x = u - rows / 2
+    y = v - columns / 2
     z = 1000 / d
 
     return x, y, z
 
 def analyse_min(line):
 
-    min_index = np.argmin(line)
-    fst_min = line[min_index]
+    return np.argmin(line), np.min(line)
 
-    line[min_index] = 1000000
-    snd_min = np.min(line)
+def calculate_derivation(line):
 
-    if np.abs(snd_min - fst_min) <= MATCHING_THRESHOLD:
-        min_index = -1
+    res = np.zeros(len(line), dtype=int)
+    for i in range(1, len(line)):
+        res[i] = int(line[i]) - int(line[i - 1])
 
-    return min_index
+    return res
 
-def find_bounds(one, two):
+def find_bounds():
 
-    rows, columns = one.shape
     for i in range(rows):
     # for i in range(300, 301):
+        print "line", i, "is processed"
+
+        der_vector = calculate_derivation(fst_image[i])
+        xy_pair = np.zeros(columns, dtype=int)
+        is_exist_minimum = np.zeros(columns, dtype=bool)
+        minimum_values = np.zeros(columns, dtype=int)
+
         for j in range(DELTA, columns - DELTA):
-            if one[i, j] > PIXEL_THRESHOLD:
-                line = two[i]
-                template = one[i, j - DELTA: j + DELTA + 1]
+            if np.abs(der_vector[j]) > DERIVATION_THRESHOLD:
+                template = fst_image[i, j - DELTA: j + DELTA + 1]
+                line = snd_image[i]
+                result = cv.matchTemplate(line, template, cv2.cv.CV_TM_SQDIFF)
 
-                result = cv.matchTemplate(line, template, cv2.cv.CV_TM_SQDIFF_NORMED)
+                index, min_value = analyse_min(result)
+                if min_value < MATCHING_THRESHOLD:
+                    # print min_value
+                    if is_exist_minimum[index]:
 
-                index = analyse_min(result)
-                if index >= 0 and j != index:
-                    shift = index - j
-                    x, y, z = calculate_x_y_z(i, j, shift)
-                    # x, y, z = i, j, shift
-                    write_to_file(RESULT_FILE_NAME, x, y, z, one_colored[i, j])
-
-                    # print (x, y) , one[i, j - DELTA: j + DELTA + 1], " -> ", two[i, index - DELTA : index + DELTA + 1]
-                else:
-                    if j == index:
-                        print "j = index"
+                        if min_value < minimum_values[index]:
+                            xy_pair[index] = j
+                            minimum_values[index] = min_value
                     else:
-                        print "index = -1"
-        print i
+                        is_exist_minimum[index] = True
+                        minimum_values[index] = min_value
+                        xy_pair[index] = j
 
-one = np.abs(cv2.Sobel(fst_image, cv2.CV_32F, 0, 1, ksize=3))
-two = np.abs(cv2.Sobel(snd_image, cv2.CV_32F, 0, 1, ksize=3))
+        for j in range(columns):
+            if is_exist_minimum[j] and xy_pair[j] != j:
+                s = xy_pair[j]
 
-# cv.imwrite("one sobel.png", one)
-# cv.imwrite("two sobel.png", two)
-find_bounds(one, two)
+                shift = j - s
+                x, y, z = calculate_x_y_z(i, s, shift)
+                # x, y, z = i, j, shift
+                write_to_file(x, y, z, one_colored[i, s])
+                # write_to_file(x, y, z)
+
+        print ""
+
+find_bounds()
